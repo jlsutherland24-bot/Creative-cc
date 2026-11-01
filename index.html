@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Creative Command Center</title>
+<meta name="theme-color" content="#050607">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Creative CC">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,wght@1,400&display=swap">
+<style>
+/* Layout: three-pane HUD (spaces rail / note list / editor); on phones one pane at a time with a bottom switcher. */
+:root{
+  color-scheme:dark;
+  --bg:#050607; --panel:#0a0d10; --panel2:#0e1318; --line:#16323c; --line2:#1d4552;
+  --fg:#d7e6ec; --dim:#7f98a3; --faint:#46606b;
+  --cy:#3fd9ff; --cy2:#12a6c9; --am:#ffb340; --red:#ff5d6c; --grn:#4be3a1;
+  --glow:0 0 18px rgba(63,217,255,.28);
+  --f-d:'Rajdhani',system-ui,sans-serif; --f-b:'IBM Plex Sans',system-ui,sans-serif; --f-m:'IBM Plex Mono',ui-monospace,monospace; --f-i:'Newsreader',Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-b);overflow:hidden;
+  background-image:radial-gradient(900px 420px at 50% -120px,rgba(63,217,255,.10),transparent 70%),linear-gradient(rgba(63,217,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(63,217,255,.035) 1px,transparent 1px);
+  background-size:auto,44px 44px,44px 44px}
+#app{height:100%;display:flex;flex-direction:column;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.top{display:flex;align-items:center;gap:14px;padding:6px 2px 12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.reactor{width:34px;height:34px;flex:none}
+.reactor .r1{transform-origin:50% 50%;animation:spin 14s linear infinite}
+.reactor .r2{transform-origin:50% 50%;animation:spin 9s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand h1{margin:0;font:600 18px/1 var(--f-d);letter-spacing:.22em;text-transform:uppercase;white-space:nowrap}
+.brand h1 em{font:italic 400 20px/1 var(--f-i);letter-spacing:0;text-transform:none;color:var(--cy)}
+.brand small{display:block;font:500 10px var(--f-m);color:var(--dim);letter-spacing:.14em;margin-top:3px;text-transform:uppercase}
+.search{flex:1;min-width:180px;max-width:560px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line2);border-radius:999px;padding:0 14px;height:38px}
+.search:focus-within{box-shadow:var(--glow);border-color:var(--cy2)}
+.search input{flex:1;background:none;border:0;outline:0;min-width:0;height:100%}
+.search kbd{font:500 10px var(--f-m);color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.pills{display:flex;gap:8px;margin-left:auto;align-items:center}
+.pill{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);font:600 12px var(--f-d);letter-spacing:.14em;text-transform:uppercase;display:inline-flex;align-items:center;gap:6px}
+.pill:hover{border-color:var(--cy2);box-shadow:var(--glow)}
+.pill.pri{background:var(--cy);color:#02181e;border-color:var(--cy)}
+.chip{font:500 10px var(--f-m);letter-spacing:.12em;text-transform:uppercase;color:var(--grn);border:1px solid rgba(75,227,161,.35);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.chip.local{color:var(--am);border-color:rgba(255,179,64,.4)}
+.clock{font:500 12px var(--f-m);color:var(--dim);letter-spacing:.08em}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:230px 340px minmax(0,1fr);gap:12px}
+.pane{position:relative;min-height:0;min-width:0;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.pane::before,.pane::after{content:"";position:absolute;width:14px;height:14px;border:1.5px solid var(--cy);pointer-events:none;opacity:.8}
+.pane::before{top:6px;left:6px;border-right:0;border-bottom:0;border-radius:6px 0 0 0}
+.pane::after{bottom:6px;right:6px;border-left:0;border-top:0;border-radius:0 0 6px 0}
+.ph{padding:14px 16px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ph h2{margin:0;font:600 13px var(--f-d);letter-spacing:.2em;text-transform:uppercase;color:var(--cy)}
+.ph span{font:500 11px var(--f-m);color:var(--dim)}
+.scroll{overflow:auto;min-height:0;flex:1;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+/* rail */
+.sp{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;border-left:2px solid transparent;padding:8px 16px;text-align:left}
+.sp:hover{background:rgba(63,217,255,.05)}
+.sp[aria-current=true]{background:linear-gradient(90deg,rgba(63,217,255,.14),transparent);border-left-color:var(--cy)}
+.sp i{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+.sp b{font:500 13px var(--f-b);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp u{text-decoration:none;font:500 11px var(--f-m);color:var(--dim)}
+.sep{height:1px;background:var(--line);margin:8px 16px}
+.stats{padding:12px 16px 16px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.xp{padding:0 16px 16px;display:flex;flex-direction:column;gap:6px}
+.xp .pill{justify-content:center;width:100%}
+.xp small{font:500 10px var(--f-m);color:var(--dim);letter-spacing:.06em;min-height:14px}
+.stat b{display:block;font:600 22px/1 var(--f-d);color:var(--fg);font-variant-numeric:tabular-nums}
+.stat small{font:500 9.5px var(--f-m);letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+/* list */
+.tools{display:flex;gap:8px;padding:0 16px 10px}
+.tools select{flex:1;background:var(--panel);border:1px solid var(--line2);border-radius:8px;height:30px;padding:0 8px;font-size:12px}
+.note{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:11px 16px;position:relative}
+.note:hover{background:rgba(63,217,255,.05)}
+.note[aria-current=true]{background:rgba(63,217,255,.11);box-shadow:inset 2px 0 0 var(--cy)}
+.note h3{margin:0 0 3px;font:600 15px/1.25 var(--f-d);letter-spacing:.03em;display:flex;gap:6px;align-items:center}
+.note h3 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note p{margin:0;color:var(--dim);font-size:12.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.note .m{display:flex;gap:8px;margin-top:6px;font:500 10px var(--f-m);letter-spacing:.08em;color:var(--faint);text-transform:uppercase}
+.note .m em{font-style:normal;color:var(--cy2)}
+.pin{color:var(--am)}
+.empty{padding:40px 24px;text-align:center;color:var(--dim)}
+.empty em{font:italic 400 22px var(--f-i);color:var(--cy);display:block;margin-bottom:6px}
+/* editor */
+.ed{display:flex;flex-direction:column;min-height:0;flex:1}
+.edtop{display:flex;gap:8px;align-items:center;padding:12px 16px 0;flex-wrap:wrap}
+.edtop select{background:var(--panel);border:1px solid var(--line2);border-radius:999px;height:30px;padding:0 10px;font:500 12px var(--f-m)}
+.ib{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);font:600 11px var(--f-d);letter-spacing:.14em;text-transform:uppercase}
+.ib:hover{border-color:var(--cy2)}
+.ib.on{color:var(--am);border-color:var(--am)}
+.ib.danger:hover{border-color:var(--red);color:var(--red)}
+.ttl{background:none;border:0;outline:0;width:100%;padding:14px 16px 4px;font:600 28px/1.15 var(--f-d);letter-spacing:.02em}
+.meta{padding:0 16px 10px;font:500 11px var(--f-m);color:var(--dim);letter-spacing:.06em;display:flex;gap:14px;flex-wrap:wrap}
+.txt{flex:1;min-height:0;width:100%;resize:none;background:none;border:0;border-top:1px solid var(--line);outline:0;padding:16px 16px 40px;font:400 15.5px/1.7 var(--f-b);max-width:78ch}
+.ro{color:var(--am);font:500 11px var(--f-m);padding:0 16px 8px}
+.welcome{margin:auto;max-width:44ch;padding:30px;text-align:center}
+.welcome em{font:italic 400 30px/1.15 var(--f-i);color:var(--cy);display:block;margin-bottom:10px}
+.welcome p{color:var(--dim);margin:6px 0}
+.bar{display:none}
+@media (max-width:900px){
+  .top{gap:10px}.brand small,.clock,.search kbd{display:none}
+  .search{order:3;flex-basis:100%;max-width:none}
+  .pills{margin-left:auto}
+  .body{display:block;position:relative;padding-bottom:58px}
+  .body{padding-bottom:0}
+  .pane{position:absolute;inset:0 0 54px 0;display:none}
+  body[data-view=rail] #rail,body[data-view=list] #list,body[data-view=ed] #editor{display:flex}
+  .bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:fixed;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-left,0px)) calc(8px + env(safe-area-inset-bottom,0px));background:rgba(5,6,7,.94);border-top:1px solid var(--line);z-index:5}
+  .bar button{height:38px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);font:600 12px var(--f-d);letter-spacing:.16em;text-transform:uppercase}
+  .bar button[aria-current=true]{background:var(--cy);color:#02181e;border-color:var(--cy)}
+  #app{padding-bottom:0}
+  .ttl{font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){.reactor .r1,.reactor .r2{animation:none}}
+
+.ico{width:36px;padding:0;justify-content:center;font-size:16px}
+.ov{position:fixed;inset:0;background:rgba(2,4,5,.78);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+.ov[hidden]{display:none}
+.dlg{position:relative;width:min(520px,100%);max-height:100%;overflow:auto;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line2);border-radius:16px;padding:20px 20px 22px;box-shadow:var(--glow)}
+.dlg h2{margin:0 0 4px;font:600 15px var(--f-d);letter-spacing:.2em;text-transform:uppercase;color:var(--cy)}
+.dlg p{margin:4px 0 12px;color:var(--dim);font-size:13px}
+.dlg label{display:block;font:500 11px var(--f-m);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 4px}
+.dlg input[type=text],.dlg input[type=password],.dlg input[type=url]{width:100%;height:38px;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:0 12px;outline:0}
+.dlg input:focus{border-color:var(--cy2);box-shadow:var(--glow)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sec{border-top:1px solid var(--line);margin-top:16px;padding-top:4px}
+.st{font:500 12px var(--f-m);color:var(--dim);margin-top:10px;min-height:16px}
+.st.ok{color:var(--grn)}.st.bad{color:var(--red)}
+.chip.err{color:var(--red);border-color:rgba(255,93,108,.4)}
+.chip.off{color:var(--faint);border-color:var(--line2)}
+.welcome .row{justify-content:center}
+</style></head><body>
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <svg class="reactor" viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="#3fd9ff">
+        <circle cx="20" cy="20" r="18" stroke-opacity=".25" stroke-width="1.5"/>
+        <g class="r1"><circle cx="20" cy="20" r="14" stroke-width="1.5" stroke-dasharray="6 5"/></g>
+        <g class="r2"><circle cx="20" cy="20" r="9" stroke="#ffb340" stroke-width="1.5" stroke-dasharray="3 4"/></g>
+        <circle cx="20" cy="20" r="3.4" fill="#3fd9ff" stroke="none"/>
+      </svg>
+      <div><h1>Creative <em>command</em> center</h1><small>J.S. Louis · archive online</small></div>
+    </div>
+    <label class="search"><span aria-hidden="true" style="color:var(--cy)">⌕</span><input id="q" type="search" placeholder="Search every note" autocomplete="off" aria-label="Search every note"><kbd>/</kbd></label>
+    <div class="pills">
+      <span class="clock" id="clock"></span>
+      <span class="chip" id="sync">Local</span>
+      <button class="pill ico" id="gear" aria-label="Settings" title="Settings and sync">⚙</button>
+      <button class="pill" id="spark" title="Open a random idea">Spark</button>
+      <button class="pill pri" id="new">+ New</button>
+    </div>
+  </header>
+  <div class="body">
+    <nav class="pane" id="rail" aria-label="Spaces">
+      <div class="ph"><h2>Spaces</h2><span id="nsp"></span></div>
+      <div class="scroll" id="spaces"></div>
+      <div class="stats" id="stats"></div>
+      <div class="xp"><button class="pill" id="export" title="Download every note, including your edits, as a zip of Markdown files">Export backup</button><small id="xmsg" aria-live="polite"></small></div>
+    </nav>
+    <section class="pane" id="list" aria-label="Notes">
+      <div class="ph"><h2 id="lt">All notes</h2><span id="lc"></span></div>
+      <div class="tools"><select id="sort" aria-label="Sort notes"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="az">Title A to Z</option><option value="long">Longest first</option></select></div>
+      <div class="scroll" id="items"></div>
+    </section>
+    <main class="pane" id="editor" aria-label="Note"></main>
+  </div>
+  <div class="bar" id="bar"><button data-v="rail">Spaces</button><button data-v="list">Notes</button><button data-v="ed">Note</button></div>
+</div>
+
+
+<div class="ov" id="ov" hidden role="dialog" aria-modal="true" aria-labelledby="dt"><div class="dlg">
+  <h2 id="dt">Settings and sync</h2>
+  <p>Connect the sync address and key from your Cloudflare Worker. Use the same two values on every device and your notes stay in step.</p>
+  <label for="cu">Sync address</label><input type="url" id="cu" placeholder="https://creative-cc-sync.your-name.workers.dev" autocomplete="off">
+  <label for="ck">Sync key</label><input type="password" id="ck" placeholder="The secret you set in Cloudflare" autocomplete="off">
+  <div class="row"><button class="pill pri" id="csave">Connect and sync</button><button class="pill" id="cnow">Sync now</button><button class="pill" id="cl">Close</button></div>
+  <div class="st" id="ss" aria-live="polite"></div>
+  <div class="sec"><label>Bring in your Evernote backup</label><p>Pick <b>evernote-full-backup.json</b> from your Evernote Backup folder. Notes already here are skipped.</p>
+  <input type="file" id="imp" accept=".json,application/json"></div>
+  <p style="margin-top:16px;font-size:12px">Notes in the Vault space never leave the device they are on.</p>
+</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const SPACES=['Five & Dive','Fiction & Stories','Writing','Ideas & Inventions','Tech & Apps','Business & Money','Comedy','Film & TV','Mind & Life','Food & Drink','Design','Health','Lists & Learning','Ryan Tribute','Scratch','Vault'];
+const HUES={'Five & Dive':'#ffb340','Fiction & Stories':'#b58cff','Writing':'#8f9bff','Ideas & Inventions':'#3fd9ff','Tech & Apps':'#4be3a1','Business & Money':'#ffd166','Comedy':'#ff7ab6','Film & TV':'#ff8c5a','Mind & Life':'#7fb5ff','Food & Drink':'#9be564','Design':'#5ee0d0','Health':'#ff5d6c','Lists & Learning':'#c1ccd2','Ryan Tribute':'#ffffff','Scratch':'#46606b','Vault':'#ff5d6c'};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const wc=t=>{t=(t||'').trim();return t?t.split(/\s+/).length:0};
+const KEY='cc-notes-v2',DKEY='cc-dirty-v2',CKEY='cc-sync-v2',CUR='cc-cursor-v2';
+const rd=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const wr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){flash('Storage is full. Export a backup now.','bad');return false}};
+let notes=new Map(rd(KEY,[]).map(n=>[n.id,n]));
+let dirty=new Set(rd(DKEY,[]));
+let cfg=rd(CKEY,{url:'',key:''});
+let view={space:'all',q:'',sort:'new',sel:null};
+let saveT,pushT;
+function persist(){clearTimeout(saveT);saveT=setTimeout(()=>{wr(KEY,[...notes.values()]);wr(DKEY,[...dirty])},400)}
+function flash(m,c){const s=$('#xmsg');if(s){s.textContent=m;s.className=c||'';setTimeout(()=>{s.textContent=''},5000)}}
+
+/* ---------- sync with the Cloudflare Worker ---------- */
+const synced=()=>cfg.url&&cfg.key;
+function setSync(state,detail){const c=$('#sync');const m={ok:['Synced',''],busy:['Syncing',''],pend:['Saved here','local'],err:['Sync error','err'],off:['Not synced','off']}[state];c.textContent=m[0];c.className='chip '+m[1];c.title=detail||''}
+async function api(path,opts){
+  const r=await fetch(cfg.url.replace(/\/+$/,'')+path,Object.assign({headers:{'X-App-Secret':cfg.key,'Content-Type':'application/json'}},opts||{}));
+  if(!r.ok)throw new Error(r.status===401?'Wrong sync key':'Server answered '+r.status);
+  return r.json();
+}
+let syncing=false;
+async function syncNow(){
+  if(!synced()){setSync('off','Open Settings to connect sync');return}
+  if(syncing)return;syncing=true;setSync('busy');
+  try{
+    const ids=[...dirty].filter(id=>notes.has(id)&&!notes.get(id).vault);
+    for(let i=0;i<ids.length;i+=100){
+      const batch=ids.slice(i,i+100).map(id=>notes.get(id));
+      await api('/sync/notes',{method:'POST',body:JSON.stringify({notes:batch})});
+      batch.forEach(n=>dirty.delete(n.id));
+    }
+    [...dirty].forEach(id=>{const n=notes.get(id);if(!n||n.vault)dirty.delete(id)});
+    let cursor=rd(CUR,0),more=true,got=0;
+    while(more){
+      const r=await api('/sync/notes?since='+cursor);
+      r.notes.forEach(rn=>{const l=notes.get(rn.id);if(!l||(rn.updated||0)>(l.updated||0)){notes.set(rn.id,Object.assign({},l&&l.vault?{vault:true}:{},rn));got++}});
+      cursor=r.cursor||cursor;more=!!r.more;
+    }
+    wr(CUR,cursor);persist();wr(KEY,[...notes.values()]);wr(DKEY,[...dirty]);
+    setSync('ok','Last sync '+new Date().toLocaleTimeString());render();
+    return got;
+  }catch(e){setSync('err',e.message);flash(e.message,'bad')}finally{syncing=false}
+}
+function schedulePush(){clearTimeout(pushT);if(synced()){setSync('pend');pushT=setTimeout(syncNow,2500)}else setSync('off','Open Settings to connect sync')}
+
+/* ---------- editing ---------- */
+function save(n,patch){Object.assign(n,patch);n.w=wc(n.body);n.updated=Date.now();notes.set(n.id,n);if(!n.vault)dirty.add(n.id);persist();schedulePush()}
+function visible(){
+  const q=view.q.trim().toLowerCase();let a=[...notes.values()].filter(n=>view.space==='trash'?n.deleted:!n.deleted);
+  if(view.space==='pin')a=a.filter(n=>n.pinned);else if(view.space!=='all'&&view.space!=='trash')a=a.filter(n=>n.space===view.space);
+  if(q){const t=q.split(/\s+/);a=a.filter(n=>{const h=(n.title+' '+n.body).toLowerCase();return t.every(x=>h.includes(x))})}
+  const s=view.sort;a.sort((x,y)=>(y.pinned?1:0)-(x.pinned?1:0)||(s==='old'?x.ts-y.ts:s==='az'?x.title.localeCompare(y.title):s==='long'?y.w-x.w:y.ts-x.ts));return a;
+}
+const snippet=n=>(n.body||'').replace(/\s+/g,' ').trim().slice(0,170)||'Empty note, title only.';
+function renderRail(){
+  const live=[...notes.values()].filter(n=>!n.deleted);const cnt={};live.forEach(n=>cnt[n.space]=(cnt[n.space]||0)+1);
+  const row=(k,l,c,col)=>`<button class="sp" data-sp="${k}" aria-current="${view.space===k}"><i style="color:${col};background:${col}"></i><b>${esc(l)}</b><u>${c}</u></button>`;
+  let h=row('all','All notes',live.length,'#3fd9ff')+row('pin','Pinned',live.filter(n=>n.pinned).length,'#ffb340')+'<div class="sep"></div>';
+  SPACES.forEach(s=>{if(cnt[s])h+=row(s,s,cnt[s],HUES[s]||'#888')});
+  Object.keys(cnt).filter(s=>!SPACES.includes(s)).forEach(s=>{h+=row(s,s,cnt[s],'#888')});
+  h+='<div class="sep"></div>'+row('trash','Trash',[...notes.values()].filter(n=>n.deleted).length,'#46606b');
+  $('#spaces').innerHTML=h;$('#nsp').textContent=Object.keys(cnt).length;
+  const words=live.reduce((s,n)=>s+n.w,0);
+  $('#stats').innerHTML=`<div class="stat"><b>${live.length}</b><small>Notes</small></div><div class="stat"><b>${words.toLocaleString()}</b><small>Words</small></div><div class="stat"><b>${Object.keys(cnt).length}</b><small>Spaces</small></div><div class="stat"><b>${live.filter(n=>n.kind==='Long draft').length}</b><small>Long drafts</small></div>`;
+}
+function renderList(){
+  const a=visible();const nm=view.space==='all'?'All notes':view.space==='pin'?'Pinned':view.space==='trash'?'Trash':view.space;
+  $('#lt').textContent=nm;$('#lc').textContent=a.length+' notes';
+  $('#items').innerHTML=a.length?a.map(n=>`<button class="note" data-id="${esc(n.id)}" aria-current="${view.sel===n.id}"><h3>${n.pinned?'<b class="pin">◆</b>':''}<span>${esc(n.title)}</span></h3><p>${esc(snippet(n))}</p><div class="m"><em>${esc(n.space)}</em><span>${esc(n.date||'')}</span><span>${n.w} w</span></div></button>`).join(''):`<div class="empty"><em>Nothing here yet.</em>${view.q?'No note matches that search.':notes.size?'Add a note with the New button.':'Open Settings to import your notes.'}</div>`;
+}
+function renderEditor(){
+  const n=notes.get(view.sel);const el=$('#editor');
+  if(!n){el.innerHTML=notes.size?`<div class="welcome"><em>Every idea, still here.</em><p>${[...notes.values()].filter(x=>!x.deleted).length} notes. Pick one, press <b>Spark</b> for a random one, or press <b>N</b> for a new note.</p></div>`:`<div class="welcome"><em>Welcome aboard.</em><p>This app is empty. Bring in your Evernote backup, then connect sync so your phone and computer share the same notes.</p><div class="row"><button class="pill pri" id="wset">Open settings</button></div></div>`;const b=$('#wset');if(b)b.onclick=openSettings;return}
+  el.innerHTML=`<div class="ed"><div class="edtop"><select id="esp" aria-label="Move to space">${[...new Set([...SPACES,n.space])].map(s=>`<option ${s===n.space?'selected':''}>${esc(s)}</option>`).join('')}</select>
+  <button class="ib ${n.pinned?'on':''}" id="epin">${n.pinned?'Pinned':'Pin'}</button><button class="ib" id="ecopy">Copy</button>${n.deleted?'<button class="ib" id="erest">Restore</button>':'<button class="ib danger" id="edel">Trash</button>'}</div>
+  <input class="ttl" id="ett" value="${esc(n.title)}" aria-label="Title" ${n.deleted?'readonly':''}>
+  <div class="meta"><span>${esc(n.date||'')}</span><span id="ew">${n.w} words</span><span>${esc(n.kind||'Note')}</span>${n.nb?`<span>from ${esc(n.nb)}</span>`:''}${n.vault?'<span style="color:var(--am)">on this device only</span>':''}</div>
+  <textarea class="txt" id="etx" aria-label="Note text" placeholder="Start writing..." ${n.deleted?'readonly':''}>${esc(n.body||'')}</textarea></div>`;
+  $('#ett').oninput=e=>{save(n,{title:e.target.value||'Untitled'});const b=document.querySelector(`.note[data-id="${n.id}"] h3 span`);if(b)b.textContent=n.title};
+  $('#etx').oninput=e=>{save(n,{body:e.target.value});$('#ew').textContent=n.w+' words'};
+  $('#esp').onchange=e=>{save(n,{space:e.target.value,vault:e.target.value==='Vault'});renderRail();renderList()};
+  $('#epin').onclick=()=>{save(n,{pinned:!n.pinned});render()};
+  $('#ecopy').onclick=async()=>{try{await navigator.clipboard.writeText(n.title+'\n\n'+n.body);$('#ecopy').textContent='Copied'}catch(e){$('#etx').select()}};
+  const d=$('#edel');if(d)d.onclick=()=>{save(n,{deleted:true});view.sel=null;render();go('list')};
+  const r=$('#erest');if(r)r.onclick=()=>{save(n,{deleted:false});render()};
+}
+function render(){renderRail();renderList();renderEditor()}
+function go(v){document.body.dataset.view=v;document.querySelectorAll('#bar button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===v))}
+function open(id){view.sel=id;renderList();renderEditor();go('ed')}
+$('#spaces').onclick=e=>{const b=e.target.closest('.sp');if(!b)return;view.space=b.dataset.sp;render();go('list')};
+$('#items').onclick=e=>{const b=e.target.closest('.note');if(b)open(b.dataset.id)};
+$('#bar').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
+$('#sort').onchange=e=>{view.sort=e.target.value;renderList()};
+let qt;$('#q').oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>{view.q=e.target.value;if(view.q)view.space='all';renderRail();renderList();if(view.q)go('list')},160)};
+$('#spark').onclick=()=>{const p=[...notes.values()].filter(n=>!n.deleted&&n.w>25&&!n.vault);const n=p[Math.floor(Math.random()*p.length)];if(n){view.q='';$('#q').value='';open(n.id)}};
+function newNote(){
+  const d=new Date();const id='n'+d.getTime().toString(36)+Math.random().toString(36).slice(2,5);
+  const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate();
+  const n={id,title:'Untitled',body:'',space:(!['all','pin','trash'].includes(view.space))?view.space:'Ideas & Inventions',kind:'Note',date:m,nb:'',ts:Math.floor(d/864e5+719163)*10000+9999,w:0,vault:false,updated:Date.now()};
+  save(n,{});view.q='';$('#q').value='';render();open(id);setTimeout(()=>{const t=$('#ett');if(t){t.focus();t.select()}},30);
+}
+$('#new').onclick=newNote;
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden){$('#ov').hidden=true;return}const t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT')return;if(e.key==='/'){e.preventDefault();$('#q').focus()}else if(e.key==='n'){e.preventDefault();newNote()}});
+
+/* ---------- settings, import, export ---------- */
+function openSettings(){$('#cu').value=cfg.url||'';$('#ck').value=cfg.key||'';$('#ss').textContent='';$('#ov').hidden=false;$('#cu').focus()}
+$('#gear').onclick=openSettings;$('#cl').onclick=()=>{$('#ov').hidden=true};
+$('#ov').onclick=e=>{if(e.target.id==='ov')$('#ov').hidden=true};
+$('#csave').onclick=async()=>{
+  cfg={url:$('#cu').value.trim(),key:$('#ck').value.trim()};wr(CKEY,cfg);const s=$('#ss');
+  if(!cfg.url||!cfg.key){s.textContent='Enter both the sync address and the key.';s.className='st bad';return}
+  s.textContent='Testing connection...';s.className='st';
+  try{await api('/ping');s.textContent='Connected. Syncing now...';s.className='st ok';
+    notes.forEach(n=>{if(!n.vault)dirty.add(n.id)});localStorage.removeItem(CUR);
+    const g=await syncNow();s.textContent='Connected. '+(g||0)+' notes received, '+[...notes.values()].filter(n=>!n.vault).length+' notes on this device.';s.className='st ok'}
+  catch(e){s.textContent='Could not connect: '+e.message;s.className='st bad';setSync('err',e.message)}
+};
+$('#cnow').onclick=async()=>{const s=$('#ss');s.textContent='Syncing...';s.className='st';await syncNow();s.textContent=synced()?'Done.':'Connect sync first.';s.className='st ok'};
+$('#imp').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;const s=$('#ss');
+  try{
+    const j=JSON.parse(await f.text());const arr=Array.isArray(j)?j:(j.notes||[]);let add=0;
+    arr.forEach(r=>{if(!r||!r.id||notes.has(r.id))return;
+      const n={id:String(r.id),title:r.title||'Untitled',body:r.body||'',space:r.space||'Ideas & Inventions',kind:r.kind||'Note',date:r.date||'',nb:r.nb||'',ts:r.ts||0,w:wc(r.body),vault:!!r.vault||r.space==='Vault',pinned:!!r.pinned,deleted:!!r.deleted,updated:r.updated||1};
+      notes.set(n.id,n);if(!n.vault)dirty.add(n.id);add++});
+    persist();wr(KEY,[...notes.values()]);wr(DKEY,[...dirty]);render();
+    s.textContent='Imported '+add+' notes'+(arr.length-add?' ('+(arr.length-add)+' were already here)':'')+'.';s.className='st ok';
+    if(synced())syncNow();
+  }catch(err){s.textContent='That file could not be read. Pick evernote-full-backup.json.';s.className='st bad'}
+  e.target.value='';
+};
+const fname=s=>(String(s).replace(/[\\/:*?"<>|\n\r]+/g,' ').trim().slice(0,60)||'Untitled');
+$('#export').onclick=async()=>{
+  const live=[...notes.values()].filter(n=>!n.deleted);const day=new Date().toISOString().slice(0,10);let blob,name;
+  try{
+    if(window.JSZip){const z=new JSZip();const used={};const rows=['title,space,date,words'];
+      live.forEach(n=>{const dir='Notes/'+fname(n.space.replace('&','and'));const k=dir+'/'+fname(n.title).toLowerCase();used[k]=(used[k]||0)+1;
+        z.file(dir+'/'+fname(n.title)+(used[k]>1?' ('+used[k]+')':'')+'.md','---\ntitle: "'+n.title.replace(/"/g,"'").replace(/\n/g,' ')+'"\nspace: '+n.space+'\nlast_edited: '+(n.date||'')+'\n---\n\n# '+n.title+'\n\n'+(n.body||'')+'\n');
+        rows.push([n.title,n.space,n.date,n.w].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))});
+      z.file('index.csv','﻿'+rows.join('\n'));z.file('backup.json',JSON.stringify(live,null,1));blob=await z.generateAsync({type:'blob'});name='Creative-CC-Backup-'+day+'.zip'}
+    else{blob=new Blob([JSON.stringify(live,null,1)],{type:'application/json'});name='Creative-CC-Backup-'+day+'.json'}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();flash('Exported '+live.length+' notes.','ok');
+  }catch(e){flash('Export failed.','bad')}
+};
+function tick(){const d=new Date();$('#clock').textContent=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase()+' · '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
+tick();setInterval(tick,30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&synced())syncNow()});
+addEventListener('online',()=>{if(synced())syncNow()});
+go('list');render();synced()?(setSync(dirty.size?'pend':'ok'),syncNow()):setSync('off','Open Settings to connect sync');
+/* ---------- installable app: manifest + offline cache ---------- */
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+</script></body></html>
